@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clinic-backend-config
+  namespace: staging
+data:
+  APP_NAME: "clinic"
+  TZ: "Asia/Ho_Chi_Minh"
+
+  DB_URL: "jdbc:postgresql://157.245.204.168:5432/clinic_postgres"
+  DB_POOL_MAX: "10"
+  DB_POOL_MIN: "5"
+  DB_CONN_TIMEOUT: "30000"
+  DB_IDLE_TIMEOUT: "600000"
+  DB_MAX_LIFETIME: "1800000"
+
+  REDIS_HOST: "157.245.204.168"
+  REDIS_PORT: "6379"
+
+  RABBITMQ_HOST: "157.245.204.168"
+  RABBITMQ_PORT: "5672"
+
+  RABBITMQ_EXCHANGE_NOTIFICATION: "clinic.notification.exchange"
+  RABBITMQ_EXCHANGE_TASK: "clinic.task.exchange"
+  RABBITMQ_EXCHANGE_PUBSUB: "clinic.pubsub.exchange"
+  RABBITMQ_EXCHANGE_DLX: "clinic.dlx.exchange"
+
+  RABBITMQ_QUEUE_EMAIL: "clinic.email.queue"
+  RABBITMQ_QUEUE_PUSH: "clinic.push.queue"
+  RABBITMQ_QUEUE_TASK: "clinic.task.queue"
+  RABBITMQ_QUEUE_PUBSUB: "clinic.pubsub.queue"
+  RABBITMQ_QUEUE_EMAIL_DLQ: "clinic.email.dlq"
+  RABBITMQ_QUEUE_PUSH_DLQ: "clinic.push.dlq"
+  RABBITMQ_QUEUE_TASK_DLQ: "clinic.task.dlq"
+
+  RABBITMQ_RK_EMAIL: "clinic.email"
+  RABBITMQ_RK_PUSH: "clinic.push"
+  RABBITMQ_RK_TASK: "clinic.task"
+  RABBITMQ_RK_PUBSUB: "clinic.pubsub"
+  RABBITMQ_RK_EMAIL_DLQ: "clinic.email.dead"
+  RABBITMQ_RK_PUSH_DLQ: "clinic.push.dead"
+  RABBITMQ_RK_TASK_DLQ: "clinic.task.dead"
+
+  MAIL_HOST: "smtp.gmail.com"
+  MAIL_PORT: "587"
+  MAIL_DEBUG: "false"
+
+  CORS_ALLOWED_ORIGINS: "*"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: clinic-backend-secret
+  namespace: staging
+type: Opaque
+stringData:
+  DB_USERNAME: "davidnguyen67dev"
+  DB_PASSWORD: "ThZLSkGbHn7koUctpL26ARzGK-maNiKDC-_xs9i-6J0"
+
+  MONGODB_URI: "mongodb://davidnguyen67dev:HBtGezbW83PBfJFKqqAbJWeQmdT3KdJzIEAnwrvTz88@157.245.204.168:27017/clinic_mongo?authSource=admin"
+
+  REDIS_PASSWORD: "QpHCCS28JmdwWcr8g4-lwS8nWc0Lz-abTn0KJ0Brv2g"
+
+  RABBITMQ_USERNAME: "davidnguyen67dev"
+  RABBITMQ_PASSWORD: "e-ldCzHx-gUF4FImdj2eYcpl3DBDFLz7O0bsmidINAA"
+
+  MAIL_USERNAME: "davidnguyen67dev@gmail.com"
+  MAIL_PASSWORD: "ldup qsba fmiv dbxx"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clinic-backend-deployment
+  namespace: staging
+  labels:
+    app: clinic-backend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+
+  selector:
+    matchLabels:
+      app: clinic-backend
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+
+  template:
+    metadata:
+      labels:
+        app: clinic-backend
+
+    spec:
+      containers:
+        - name: clinic-backend
+          image: davidnguyendev/backend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: clinic-backend-config
+            - secretRef:
+                name: clinic-backend-secret
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "512Mi"
+            limits:
+              cpu: "750m"
+              memory: "1Gi"
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 30
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinic-backend-service
+  namespace: staging
+  labels:
+    app: clinic-backend
+spec:
+  type: ClusterIP
+
+  selector:
+    app: clinic-backend
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clinic-backend-ingress
+  namespace: staging
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: api.vnpt.vn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: clinic-backend-service
+                port:
+                  number: 8080
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: clinic-backend-hpa
+  namespace: staging
+  labels:
+    app: clinic-backend
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: clinic-backend-deployment
+
+  minReplicas: 2
+  maxReplicas: 5
+
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -1,0 +1,25 @@
+architecture: standalone
+
+auth:
+  enabled: true
+  password: "XdLAC7aLecQ22pzT5YxZpn4sjgj8wKfi"
+
+master:
+  nodeSelector:
+    role: database
+
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+replica:
+  replicaCount: 0

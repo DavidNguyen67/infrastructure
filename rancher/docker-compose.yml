@@ -1,0 +1,21 @@
+services:
+  rancher:
+    image: rancher/rancher:v2.9.3
+    container_name: rancher
+    restart: unless-stopped
+    privileged: true
+
+    ports:
+      - "8081:80"
+      - "8443:443"
+
+    environment:
+      CATTLE_BOOTSTRAP_PASSWORD: ${RANCHER_BOOTSTRAP_PASSWORD?RANCHER_BOOTSTRAP_PASSWORD is requireds}
+
+    volumes:
+      - rancher_data:/var/lib/rancher
+
+volumes:
+  rancher_data:
+    name: rancher_data
+    driver: local

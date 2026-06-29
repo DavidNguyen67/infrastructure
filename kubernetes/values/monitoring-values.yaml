@@ -1,0 +1,95 @@
+# Một số control-plane metrics của K3s không được expose giống kubeadm.
+# Tắt để tránh target DOWN và cảnh báo sai.
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+# Chưa cần gửi cảnh báo thì tắt để tiết kiệm RAM.
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+
+  admin:
+    existingSecret: grafana-admin-secret
+    userKey: admin-user
+    passwordKey: admin-password
+
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: local-path
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+
+  service:
+    type: ClusterIP
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+
+    hosts:
+      - grafana.vnpt.vn
+
+    path: /
+    pathType: Prefix
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    replicas: 1
+
+    # Giữ dữ liệu tối đa 15 ngày hoặc 15 GB.
+    retention: 15d
+    retentionSize: "15GB"
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # Cho phép đọc ServiceMonitor trong monitoring, staging
+    # và các namespace khác.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 400Mi
+      limits:
+        cpu: "1"
+        memory: 1200Mi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi

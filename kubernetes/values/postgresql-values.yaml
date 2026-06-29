@@ -1,0 +1,41 @@
+auth:
+  postgresPassword: "vvFeN9yNdJlnlSk3bZjpRhQg4Xd1rZTb"
+  username: "clinic_user"
+  password: "vvFeN9yNdJlnlSk3bZjpRhQg4Xd1rZTb"
+  database: "clinic"
+
+primary:
+  nodeSelector:
+    role: database
+
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+readReplicas:
+  replicaCount: 0
+
+  nodeSelector:
+    role: database
+
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

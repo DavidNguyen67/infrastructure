@@ -1,0 +1,35 @@
+services:
+  keycloak-postgresql:
+    image: postgres:16-alpine
+    container_name: opp-keycloak-postgresql
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${KEYCLOAK_DB_USERNAME:?KEYCLOAK_DB_USERNAME is required}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      TZ: ${TZ:-Asia/Bangkok}
+      PGTZ: ${TZ:-Asia/Bangkok}
+
+    volumes:
+      - keycloak-postgresql-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - auth-network
+
+volumes:
+  keycloak-postgresql-data:
+    name: opp-keycloak-postgresql-data
+    driver: local
+
+networks:
+  auth-network:
+    name: opp-auth-network
+    external: true

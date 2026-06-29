@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: <APP_NAME>-deployment
+  namespace: <NAMESPACE>
+  labels:
+    app: <APP_NAME>
+spec:
+  replicas: <REPLICAS>
+  revisionHistoryLimit: 5
+
+  selector:
+    matchLabels:
+      app: <APP_NAME>
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+
+  template:
+    metadata:
+      labels:
+        app: <APP_NAME>
+
+    spec:
+      containers:
+        - name: <APP_NAME>
+          image: <IMAGE>
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: <CONTAINER_PORT>
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: <APP_NAME>-config
+            - secretRef:
+                name: <APP_NAME>-secret
+
+          resources:
+            requests:
+              cpu: "<REQUEST_CPU>"
+              memory: "<REQUEST_MEMORY>"
+            limits:
+              cpu: "<LIMIT_CPU>"
+              memory: "<LIMIT_MEMORY>"
+
+          startupProbe:
+            httpGet:
+              path: <HEALTH_CHECK_PATH>
+              port: <CONTAINER_PORT>
+            initialDelaySeconds: 30
+            periodSeconds: 3
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: <HEALTH_CHECK_PATH>
+              port: <CONTAINER_PORT>
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: <HEALTH_CHECK_PATH>
+              port: <CONTAINER_PORT>
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3

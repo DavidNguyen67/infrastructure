@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: <APP_NAME>-config
+  namespace: <NAMESPACE>
+data:
+  <CONFIG_KEY_1>: "<CONFIG_VALUE_1>"
+  <CONFIG_KEY_2>: "<CONFIG_VALUE_2>"
+  <CONFIG_KEY_3>: "<CONFIG_VALUE_3>"

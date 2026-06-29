@@ -1,0 +1,39 @@
+services:
+  postgresql:
+    image: postgres:16-alpine
+    container_name: opp-postgresql
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      TZ: ${TZ:-Asia/Bangkok}
+      PGTZ: ${TZ:-Asia/Bangkok}
+
+    ports:
+      - "${DB_BIND_IP:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+      # - ./init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - database-network
+
+volumes:
+  postgresql-data:
+    name: opp-postgresql-data
+    driver: local
+
+networks:
+  database-network:
+    name: opp-database-network
+    external: true

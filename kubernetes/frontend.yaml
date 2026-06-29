@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clinic-frontend-config
+  namespace: staging
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  HOSTNAME: "0.0.0.0"
+  TZ: "Asia/Ho_Chi_Minh"
+
+  NEXT_PUBLIC_API_URL: "http://api.vnpt.vn"
+
+  VILAO_AI_MODEL: "occ/claude-haiku-4-5-20251001"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: clinic-frontend-secret
+  namespace: staging
+type: Opaque
+stringData:
+  GNEWS_API_KEY: "47e544142b82ca62c7560526c6e3f7bd"
+  VILAO_API_KEY: "sk-97b7358bb00ba87f3e11cf4016c5da42babfe58036ecd4967845d43a9de3978a"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clinic-frontend-deployment
+  namespace: staging
+  labels:
+    app: clinic-frontend
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+
+  selector:
+    matchLabels:
+      app: clinic-frontend
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  template:
+    metadata:
+      labels:
+        app: clinic-frontend
+
+    spec:
+      containers:
+        - name: clinic-frontend
+          image: davidnguyendev/frontend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: clinic-frontend-config
+            - secretRef:
+                name: clinic-frontend-secret
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinic-frontend-service
+  namespace: staging
+  labels:
+    app: clinic-frontend
+spec:
+  type: ClusterIP
+
+  selector:
+    app: clinic-frontend
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: http
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clinic-frontend-ingress
+  namespace: staging
+  labels:
+    app: clinic-frontend
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: vnpt.vn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: clinic-frontend-service
+                port:
+                  number: 3000
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: clinic-frontend-hpa
+  namespace: staging
+  labels:
+    app: clinic-frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: clinic-frontend-deployment
+
+  minReplicas: 1
+  maxReplicas: 1
+
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

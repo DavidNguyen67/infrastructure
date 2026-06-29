@@ -1,0 +1,13 @@
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --version 4.14.5 \
+  --set controller.service.type=NodePort \
+  --set controller.service.nodePorts.http=30080 \
+  --set controller.service.nodePorts.https=30443 \
+  --set controller.service.externalTrafficPolicy=Cluster \
+  --set controller.ingressClass=nginx \
+  --set controller.ingressClassResource.name=nginx \
+  --set controller.ingressClassResource.enabled=true \
+  --set controller.ingressClassResource.default=false \
+  --set controller.watchIngressWithoutClass=false

@@ -1,0 +1,155 @@
+services:
+  jenkins-controller:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins-controller
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Bangkok}
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - jenkins_data:/var/jenkins_home
+
+    networks:
+      - jenkins_network
+
+  # Agent dùng để build và push Docker image
+  jenkins-build-agent:
+    build:
+      context: ./jenkins-agents/build
+      dockerfile: Dockerfile
+
+    container_name: jenkins-build-agent
+    restart: unless-stopped
+    init: true
+
+    environment:
+      JENKINS_URL: http://jenkins-controller:8080
+
+      JENKINS_AGENT_NAME: ${JENKINS_BUILD_AGENT_NAME:?JENKINS_BUILD_AGENT_NAME is required}
+      JENKINS_SECRET: ${JENKINS_BUILD_AGENT_SECRET:?JENKINS_BUILD_AGENT_SECRET is required}
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+
+      JENKINS_WEB_SOCKET: "true"
+
+      # Docker CLI kết nối tới Docker DinD bằng hostname
+      # có trong certificate TLS.
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+
+    volumes:
+      # Chứng chỉ client được Docker DinD tạo tự động
+      - jenkins-docker-certs:/certs/client:ro
+
+      # Workspace riêng cho build agent
+      - jenkins-build-workspace:/home/jenkins/agent
+
+    depends_on:
+      docker-dind:
+        condition: service_healthy
+
+      jenkins-controller:
+        condition: service_started
+
+    networks:
+      - jenkins_network
+
+  # Agent dùng để deploy lên K3s
+  jenkins-deploy-agent:
+    build:
+      context: ./jenkins-agents/deploy
+      dockerfile: Dockerfile
+
+      args:
+        KUBECTL_VERSION: ${KUBECTL_VERSION:?KUBECTL_VERSION is required}
+        HELM_VERSION: ${HELM_VERSION:?HELM_VERSION is required}
+
+    container_name: jenkins-deploy-agent
+    restart: unless-stopped
+    init: true
+
+    environment:
+      JENKINS_URL: http://jenkins-controller:8080
+
+      JENKINS_AGENT_NAME: ${JENKINS_DEPLOY_AGENT_NAME:?JENKINS_DEPLOY_AGENT_NAME is required}
+      JENKINS_SECRET: ${JENKINS_DEPLOY_AGENT_SECRET:?JENKINS_DEPLOY_AGENT_SECRET is required}
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
+
+      JENKINS_WEB_SOCKET: "true"
+
+    volumes:
+      - jenkins-deploy-workspace:/home/jenkins/agent
+
+    depends_on:
+      jenkins-controller:
+        condition: service_started
+
+    networks:
+      - jenkins_network
+
+  # Docker daemon riêng cho build agent
+  docker-dind:
+    image: docker:28-dind
+    container_name: jenkins-dind
+
+    # Certificate DinD sẽ chứa hostname "docker"
+    hostname: docker
+
+    restart: unless-stopped
+    privileged: true
+
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+
+    volumes:
+      # DinD ghi certificate client vào đây
+      - jenkins-docker-certs:/certs/client
+
+      # Lưu image, layer và build cache của Docker
+      - jenkins-docker-data:/var/lib/docker
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "DOCKER_HOST=tcp://localhost:2376 DOCKER_TLS_VERIFY=1 DOCKER_CERT_PATH=/certs/client docker info >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+    networks:
+      jenkins_network:
+        aliases:
+          # Build agent sẽ resolve tên docker thành container DinD
+          - docker
+
+volumes:
+  jenkins_data:
+    external: true
+    name: jenkins_data
+
+  jenkins-docker-certs:
+    name: jenkins-docker-certs
+    driver: local
+
+  jenkins-build-workspace:
+    name: jenkins-build-workspace
+    driver: local
+
+  jenkins-deploy-workspace:
+    name: jenkins-deploy-workspace
+    driver: local
+
+  jenkins-docker-data:
+    name: jenkins-docker-data
+    driver: local
+
+networks:
+  jenkins_network:
+    name: jenkins_network
+    driver: bridge
