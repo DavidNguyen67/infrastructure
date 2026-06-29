@@ -28,6 +28,8 @@ services:
 
     volumes:
       - ./realm:/opt/keycloak/data/import:ro
+      - ./server.crt.pem:/opt/keycloak/conf/server.crt.pem
+      - ./server.key.pem:/opt/keycloak/conf/server.key.pem
 
     networks:
       - auth-network
