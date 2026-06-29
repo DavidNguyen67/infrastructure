@@ -10,7 +10,7 @@ services:
       - "8443:443"
 
     environment:
-      CATTLE_BOOTSTRAP_PASSWORD: ${RANCHER_BOOTSTRAP_PASSWORD?RANCHER_BOOTSTRAP_PASSWORD is requireds}
+      CATTLE_BOOTSTRAP_PASSWORD: ${RANCHER_BOOTSTRAP_PASSWORD?RANCHER_BOOTSTRAP_PASSWORD is required}
 
     volumes:
       - rancher_data:/var/lib/rancher
