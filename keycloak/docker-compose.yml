@@ -36,8 +36,8 @@ services:
 
     volumes:
       - ./realm:/opt/keycloak/data/import:ro
-      - ./certs/keycloak.crt:/opt/keycloak/conf/keycloak.crt:ro
-      - ./certs/keycloak.key:/opt/keycloak/conf/keycloak.key:ro
+      - ./certs/keycloak.crt:/opt/keycloak/conf/keycloak.crt
+      - ./certs/keycloak.key:/opt/keycloak/conf/keycloak.key
     networks:
       - auth-network
 
