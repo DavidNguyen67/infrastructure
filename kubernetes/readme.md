@@ -12,13 +12,13 @@ Triển khai K3s một node, cài NGINX Ingress Controller và dùng các manife
 
 ## Các file chính
 
-| File | Mục đích |
-| --- | --- |
-| `00-project.yaml` | Template đầy đủ: Namespace, ConfigMap, Secret, Deployment, Service, Ingress và HPA. |
-| `01-namespace.yaml` đến `12-statefullset.yaml` | Các manifest tách riêng để tham khảo hoặc áp dụng từng resource. |
-| `ingress-controller.sh` | Cài NGINX Ingress Controller qua Helm với NodePort `30080`/`30443`. |
-| `backend.yaml`, `frontend.yaml` | Manifest mẫu cho backend và frontend. |
-| `values/` | Helm values cho PostgreSQL, Redis và monitoring. |
+| File                                           | Mục đích                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `00-project.yaml`                              | Template đầy đủ: Namespace, ConfigMap, Secret, Deployment, Service, Ingress và HPA. |
+| `01-namespace.yaml` đến `12-statefullset.yaml` | Các manifest tách riêng để tham khảo hoặc áp dụng từng resource.                    |
+| `ingress-controller.sh`                        | Cài NGINX Ingress Controller qua Helm với NodePort `30080`/`30443`.                 |
+| `backend.yaml`, `frontend.yaml`                | Manifest mẫu cho backend và frontend.                                               |
+| `values/`                                      | Helm values cho PostgreSQL, Redis và monitoring.                                    |
 
 ## Cài K3s lần đầu
 
@@ -46,7 +46,7 @@ Triển khai K3s một node, cài NGINX Ingress Controller và dùng các manife
    kubectl get nodes
    ```
 
-4. Nếu quản trị từ máy khác, sao chép `/etc/rancher/k3s/k3s.yaml` sang máy đó và thay `127.0.0.1` trong trường `server` bằng IP hoặc DNS của K3s server. Kubeconfig này có quyền quản trị cluster, không chia sẻ công khai.
+4. Nếu quản trị từ máy khác, sao chép `/etc/rancher/k3s/k3s.yaml` sang máy đó và thay `0.0.0.0` trong trường `server` bằng IP hoặc DNS của K3s server. Kubeconfig này có quyền quản trị cluster, không chia sẻ công khai.
 
 ## Cài NGINX Ingress Controller
 
@@ -89,13 +89,13 @@ kubectl describe hpa -n <NAMESPACE> <APP_NAME>-hpa
 
 ## Khắc phục nhanh
 
-| Hiện tượng | Cách kiểm tra / xử lý |
-| --- | --- |
-| `kubectl` bị `connection refused` | Kiểm tra dịch vụ: `sudo systemctl status k3s`; xem log: `sudo journalctl -u k3s -f`. |
-| Ingress trả `503` | Kiểm tra `kubectl get endpoints -n <NAMESPACE>`; selector Service phải khớp label Pod, Pod phải `Ready`, và `targetPort` phải đúng port ứng dụng. |
-| Domain không truy cập được | Kiểm tra DNS, firewall các cổng `30080`/`30443`, rồi kiểm tra `kubectl get svc -n ingress-nginx`. |
-| HPA hiện `<unknown>` | Kiểm tra `kubectl top pods -n <NAMESPACE>` và đảm bảo Deployment có `resources.requests.cpu`. |
-| Pod `CrashLoopBackOff` | Xem `kubectl logs -n <NAMESPACE> <POD_NAME> --previous`; thường do image, biến môi trường/Secret, port hoặc resource limit. |
+| Hiện tượng                        | Cách kiểm tra / xử lý                                                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kubectl` bị `connection refused` | Kiểm tra dịch vụ: `sudo systemctl status k3s`; xem log: `sudo journalctl -u k3s -f`.                                                              |
+| Ingress trả `503`                 | Kiểm tra `kubectl get endpoints -n <NAMESPACE>`; selector Service phải khớp label Pod, Pod phải `Ready`, và `targetPort` phải đúng port ứng dụng. |
+| Domain không truy cập được        | Kiểm tra DNS, firewall các cổng `30080`/`30443`, rồi kiểm tra `kubectl get svc -n ingress-nginx`.                                                 |
+| HPA hiện `<unknown>`              | Kiểm tra `kubectl top pods -n <NAMESPACE>` và đảm bảo Deployment có `resources.requests.cpu`.                                                     |
+| Pod `CrashLoopBackOff`            | Xem `kubectl logs -n <NAMESPACE> <POD_NAME> --previous`; thường do image, biến môi trường/Secret, port hoặc resource limit.                       |
 
 ## Dữ liệu và lưu ý
 

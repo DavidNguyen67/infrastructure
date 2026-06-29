@@ -22,13 +22,17 @@ services:
       - ${REDIS_MAX_MEMORY_POLICY:-allkeys-lru}
 
     ports:
-      - "${DB_BIND_IP:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+      - "${DB_BIND_IP:-0.0.0.0}:${REDIS_PORT:-6379}:6379"
 
     volumes:
       - redis-data:/data
 
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping 2>/dev/null | grep -q PONG"]
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli -a "$${REDIS_PASSWORD}" ping 2>/dev/null | grep -q PONG',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
