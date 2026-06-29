@@ -19,8 +19,8 @@ services:
 
       # Bật HTTPS trực tiếp trên Keycloak
       KC_HTTP_ENABLED: "false"
-      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/server.crt.pem
-      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key.pem
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/keycloak.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/keycloak.key
 
       # Phải đúng với domain hoặc IP trong chứng chỉ
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
@@ -36,9 +36,8 @@ services:
 
     volumes:
       - ./realm:/opt/keycloak/data/import:ro
-      - ./server.crt.pem:/opt/keycloak/conf/server.crt.pem:ro
-      - ./server.key.pem:/opt/keycloak/conf/server.key.pem:ro
-
+      - ./certs/keycloak.crt:/opt/keycloak/conf/keycloak.crt:ro
+      - ./certs/keycloak.key:/opt/keycloak/conf/keycloak.key:ro
     networks:
       - auth-network
 
